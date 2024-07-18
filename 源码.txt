@@ -1,0 +1,743 @@
+#dataAndTp.ipynb
+
+import pandas as pd
+import numpy as np
+#import warnings
+#warnings.simplefilter(action='ignore', category=FutureWarning)
+def findMaxValueY(df,w,t):
+    max_value = 0
+    value_x = 0
+    value_y = 0
+    for i in range(w):
+        row = df.iloc[i]
+        max_y = row.max()
+        max_y_id = row[row == max_y].index[0]
+        if(max_y > max_value):
+            value_x = i 
+            value_y = max_y_id 
+            max_value = max_y
+    #print(f"该方案中最大值为{max_value}它的位置是第{value_x+1}行，第{value_y+1}列")    
+    return value_y
+
+def findMaxValueX(df,w,t):
+    max_value = 0
+    value_x = 0
+    value_y = 0
+    for i in range(w):
+        row = df.iloc[i]
+        max_y = row.max()
+        max_y_id = row[row == max_y].index[0]
+        if(max_y > max_value):
+            value_x = i 
+            value_y = max_y_id 
+            max_value = max_y
+    #print(f"该方案中最大值为{max_value}它的位置是第{value_x+1}行，第{value_y+1}列")    
+    return value_x
+    
+def findMaxValue(df,w,t):
+    max_value = 0
+    value_x = 0
+    value_y = 0
+    for i in range(w):
+        row = df.iloc[i]
+        max_y = row.max()
+        max_y_id = row[row == max_y].index[0]
+        if(max_y > max_value):
+            value_x = i
+            value_y = max_y_id
+            max_value = max_y
+    #print(f"该方案中最大值为{max_value}它的位置是第{value_x+1}行，第{value_y+1}列")    
+    return max_value
+#数据集随机生成函数(w种武器对应t种目标的杀伤概率)
+def dataGeneration(w,t,p):
+    array1 = (np.random.rand(w,t)*50+40)/100 #随机杀伤概率为(0.40,0.90]
+    array2 = np.round(array1,2)
+    df1 = pd.DataFrame(array2)
+    array3 = (np.random.rand(1,t)*75+25)
+    array4 = np.round(array3,2)
+    df2 = pd.DataFrame(array4)
+    array5 = np.random.rand(w,t)
+    df3 = pd.DataFrame(array5)
+    for i in range(t):
+        df3[i] =df1[i] * df2.iat[0,i]    
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      df1.to_excel(writer,sheet_name='P' ,index=False)
+      df2.to_excel(writer,sheet_name='V' ,index=False)
+      df3.to_excel(writer,sheet_name='VP' ,index=False)
+#df = pd.read_excel("C:/Users/DELL/Desktop/毕设/data3.xlsx")
+#print(df)
+def yuGeneration(p):
+    df1 = pd.read_excel(p,sheet_name='P')
+    #print(df1)
+    df2 = pd.read_excel(p,sheet_name='VP')
+    #print(df2)
+    df3 = df2/(1-df1)
+    #print(df3)
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      df3.to_excel(writer,sheet_name='Y' ,index=False)   
+def GenerationX0(p):
+    dfx0 = pd.read_excel(p,sheet_name='Y')
+    dfx0 *= 0
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      dfx0.to_excel(writer,sheet_name='0' ,index=False)
+      dfx0.to_excel(writer,sheet_name='t' ,index=False)
+def testProblem(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfy = pd.read_excel(p,sheet_name='Y')
+    allValue = 0
+    for i in range(w):
+        row = dfy.iloc[i]
+        max_y = row.max()
+        max_y_id = row[row == max_y].index[0]
+        allValue += dfvp.iat[i,max_y_id] #计入总价值
+        dfv.iat[0,max_y_id] *= 1-dfp.iat[i,max_y_id] #每次分配后的剩余价值
+        dfp.iloc[i] *= 0 #将被分配后的武器杀伤概率清0
+        dfvp.iloc[i] *=0
+        for j in range(w):
+            dfvp.iat[j,max_y_id] = dfv.iat[0,max_y_id]*dfp.iat[j,max_y_id]
+        dfy = dfvp/(1-dfp)
+        print(f"武器{i+1}分配给目标{max_y_id+1}")
+    print(f"该方案总价值收益为{allValue}")   
+def testProblem2(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfy = pd.read_excel(p,sheet_name='Y')
+    allValue = 0
+    a = 0
+    for i in range(w):
+        a = findMaxValueX(dfy,w,t)
+        row = dfy.iloc[a]
+        max_y = row.max()
+        max_y_id = row[row == max_y].index[0]
+        allValue += dfvp.iat[a,max_y_id] #计入总价值
+        dfv.iat[0,max_y_id] *= 1-dfp.iat[a,max_y_id] #每次分配后的剩余价值
+        dfp.iloc[a] *= 0 #将被分配后的武器杀伤概率清0
+        dfvp.iloc[a] *=0
+        for j in range(w):
+            dfvp.iat[j,max_y_id] = dfv.iat[0,max_y_id]*dfp.iat[j,max_y_id]
+        dfy = dfvp/(1-dfp)
+        print(f"武器{a+1}分配给目标{max_y_id+1}")
+    print(f"该方案总价值收益为{allValue}")  
+def testProblem3wrong(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfy = pd.read_excel(p,sheet_name='Y')
+    allValue = 0
+    firstX = 0
+    secondX = 0
+    for i in range(w):
+        firstX = findMaxValueX(dfy,w,t)        #找到最大的两个值及其索引
+        firstRow = dfy.iloc[firstX]
+        max_y = firstRow.max()
+        max_y_id = firstRow[firstRow == max_y].index[0]
+        dfy.iat[firstX,max_y_id] = 0
+        secondX = findMaxValueX(dfy,w,t)
+        SecondRow = dfy.iloc[secondX]
+        second_y = SecondRow.max()
+        second_y_id = SecondRow[SecondRow == second_y].index[0]
+        dfy.iat[firstX,max_y_id] = max_y
+        if(firstX != secondX):
+            dfy.iat[firstX,max_y_id] = 0
+            second_index =dfy[max_y_id].idxmax()
+            second_value = dfy.loc[second_index,max_y_id]
+            compare1 = max_y - second_value
+            dfy.iat[firstX,max_y_id] = max_y
+            dfy.iat[secondX,second_y_id] = 0
+            second_index = dfy[second_y_id].idxmax()
+            second_value = dfy.loc[second_index,second_y_id]
+            compare2 = second_y - second_value
+            dfy.iat[secondX,second_y_id] = second_y
+            if(compare2 > compare1):
+                firstX = secondX
+                max_y = second_y
+                max_y_id = second_y_id    
+        allValue += dfvp.iat[firstX,max_y_id] #计入总价值
+        dfv.iat[0,max_y_id] *= 1-dfp.iat[firstX,max_y_id] #每次分配后的剩余价值
+        dfp.iloc[firstX] *= 0 #将被分配后的武器杀伤概率清0
+        dfvp.iloc[firstX] *=0
+        for j in range(w):
+            dfvp.iat[j,max_y_id] = dfv.iat[0,max_y_id]*dfp.iat[j,max_y_id]
+        dfy = dfvp/(1-dfp)
+        print(f"武器{firstX+1}分配给目标{max_y_id+1}")
+    print(f"该方案总价值收益为{allValue}")
+def testProblem3(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfy = pd.read_excel(p,sheet_name='Y')
+    dfx0 = pd.read_excel(p,sheet_name='0')
+    dft = pd.read_excel(p,sheet_name='0')
+    allValue = 0
+    firstX = 0
+    secondX = 0
+    for i in range(w):
+        firstX = findMaxValueX(dfy,w,t)        #找到最大的两个值及其索引
+        firstRow = dfy.iloc[firstX]
+        max_y = firstRow.max()
+        max_y_id = firstRow[firstRow == max_y].index[0]
+        dfy.iat[firstX,max_y_id] = 0
+        secondX = findMaxValueX(dfy,w,t)
+        SecondRow = dfy.iloc[secondX]
+        second_y = SecondRow.max()
+        second_y_id = SecondRow[SecondRow == second_y].index[0]
+        dfy.iat[firstX,max_y_id] = max_y
+        if(firstX != secondX):                 #计算每个最大值他对应的行中第二大的值随后进行对比
+            dfy.iat[firstX,max_y_id] = 0
+            second_value = firstRow.max()
+            second_index = firstRow[firstRow == second_value].index[0]
+            dfy.iat[firstX,max_y_id] = max_y
+            compare1 = max_y - second_value
+            dfy.iat[secondX,second_y_id] = 0
+            second_value = SecondRow.max()
+            second_index = SecondRow[SecondRow == second_value].index[0]
+            dfy.iat[secondX,second_y_id] = second_y
+            compare2 = second_y - second_value
+            if(compare2 > compare1):
+                firstX = secondX
+                max_y = second_y
+                max_y_id = second_y_id    
+        allValue += dfvp.iat[firstX,max_y_id] #计入总价值
+        #print(dfy.iat[firstX,max_y_id])
+        dft.iat[i,0] = dfy.iat[firstX,max_y_id]
+        dfv.iat[0,max_y_id] *= 1-dfp.iat[firstX,max_y_id] #每次分配后的剩余价值
+        dfp.iloc[firstX] *= 0 #将被分配后的武器杀伤概率清0
+        dfvp.iloc[firstX] *=0
+        for j in range(w):
+            dfvp.iat[j,max_y_id] = dfv.iat[0,max_y_id]*dfp.iat[j,max_y_id]
+        dfy = dfvp/(1-dfp)
+        print(f"武器{firstX+1}分配给目标{max_y_id+1}")
+        dfx0.iat[firstX,max_y_id] = 1
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:
+      dfx0.to_excel(writer,sheet_name='X0' ,index=False)
+      dft.to_excel(writer,sheet_name='t1' ,index=False)
+    print(f"该方案总价值收益为{allValue}")
+def computerByX0(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    allValue = 0
+    for i in range(w):
+        row = dfx0.iloc[i]
+        id = row[row == 1].index[0]
+        allValue += dfp.iat[i,id]*dfv.iat[0,id]
+        dfv.iat[0,id] *= 1-dfp.iat[i,id]
+    return allValue
+def begin(w,t,p):
+    dataGeneration(w,t,p)
+    yuGeneration(p)
+    GenerationX0(p)
+def load(w,t,p):
+    dft = pd.read_excel(p,sheet_name='t1')
+    for i in range(w):
+        print('%.2f,'%dft.iat[i,0])
+#实例：
+begin(5,5,'C:/Users/DELL/Desktop/毕设/data/5-5.xlsx')
+%time testProblem(,100,'C:/Users/DELL/Desktop/毕设/data/100-100.xlsx')
+%time testProblem2(100,100,'C:/Users/DELL/Desktop/毕设/data/100-100.xlsx')
+%time testProblem3(80,40,'C:/Users/DELL/Desktop/毕设/data/80-40.xlsx')
+load(100,100,'C:/Users/DELL/Desktop/毕设/data/100-100.xlsx')
+
+#enum.ipynb，此处只展示部分
+
+import pandas as pd
+import numpy as np
+def computerValue55(w1x,w1y,w2x,w2y,w3x,w3y,w4x,w4y,w5x,w5y,p):
+    c1 = pd.read_excel(p,sheet_name='P')
+    c2 = pd.read_excel(p,sheet_name='V')
+    Value = 0
+    Value += c2.iat[0,w1y]*c1.iat[w1x,w1y]
+    c2.iat[0,w1y]=c2.iat[0,w1y]*(1-c1.iat[w1x,w1y])
+    Value += c2.iat[0,w2y]*c1.iat[w2x,w2y]
+    c2.iat[0,w2y]=c2.iat[0,w2y]*(1-c1.iat[w2x,w2y])
+    Value += c2.iat[0,w3y]*c1.iat[w3x,w3y]
+    c2.iat[0,w3y]=c2.iat[0,w3y]*(1-c1.iat[w3x,w3y])
+    Value += c2.iat[0,w4y]*c1.iat[w4x,w4y]
+    c2.iat[0,w4y]=c2.iat[0,w4y]*(1-c1.iat[w4x,w4y])
+    Value += c2.iat[0,w5y]*c1.iat[w5x,w5y]
+    c2.iat[0,w5y]=c2.iat[0,w5y]*(1-c1.iat[w5x,w5y])    
+    return Value
+def computerByX0(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    allValue = 0
+    for i in range(w):
+        row = dfx0.iloc[i]
+        id = row[row == 1].index[0]
+        allValue += dfp.iat[i,id]*dfv.iat[0,id]
+        dfv.iat[0,id] *= 1-dfp.iat[i,id]
+    return allValue
+def enumeration55(p):
+    allValue = 0
+    w1_x = 0
+    w2_x = 1
+    w3_x = 2
+    w4_x = 3
+    w5_x = 4
+    w1_y = 0
+    w2_y = 0
+    w3_y = 0
+    w4_y = 0
+    w5_y = 0
+    tw1_x = 0
+    tw2_x = 1
+    tw3_x = 2
+    tw4_x = 3
+    tw5_x = 4
+    tw1_y = 0
+    tw2_y = 0
+    tw3_y = 0
+    tw4_y = 0
+    tw5_y = 0
+    for a in range(5):
+        for b in range(5):
+            for c in range(5):
+                for d in range(5):
+                    for e in range(5):
+                        if(allValue < computerValue55(w1_x,w1_y,w2_x,w2_y,w3_x,w3_y,w4_x,w4_y,w5_x,w5_y,p)):
+                            allValue = computerValue55(w1_x,w1_y,w2_x,w2_y,w3_x,w3_y,w4_x,w4_y,w5_x,w5_y,p)
+                            tw1_x = w1_x
+                            tw2_x = w2_x
+                            tw3_x = w3_x
+                            tw4_x = w4_x
+                            tw5_x = w5_x
+                            tw1_y = w1_y
+                            tw2_y = w2_y
+                            tw3_y = w3_y
+                            tw4_y = w4_y
+                            tw5_y = w5_y
+                        w1_y += 1
+                    w1_y = 0
+                    w2_y += 1
+                w2_y = 0
+                w3_y += 1
+            w3_y = 0
+            w4_y += 1
+        w4_y = 0
+        w5_y += 1
+    print(f"最佳的分配方案是: 武器1分配给目标{tw1_y+1}, \
+    武器2分配给目标{tw2_y+1},\
+    武器3分配给目标{tw3_y+1},\
+    武器4分配给目标{tw4_y+1},\
+    武器5分配给目标{tw5_y+1},\
+    最终的价值为{allValue}")
+
+def computerValue33(w1x,w1y,w2x,w2y,w3x,w3y,p):
+    c1 = pd.read_excel(p,sheet_name='P')
+    c2 = pd.read_excel(p,sheet_name='V')
+    Value = 0
+    Value += c2.iat[0,w1y]*c1.iat[w1x,w1y]
+    c2.iat[0,w1y]=c2.iat[0,w1y]*(1-c1.iat[w1x,w1y])
+    Value += c2.iat[0,w2y]*c1.iat[w2x,w2y]
+    c2.iat[0,w2y]=c2.iat[0,w2y]*(1-c1.iat[w2x,w2y])
+    Value += c2.iat[0,w3y]*c1.iat[w3x,w3y]
+    c2.iat[0,w3y]=c2.iat[0,w3y]*(1-c1.iat[w3x,w3y])   
+    return Value
+
+def enumeration33(p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfy = pd.read_excel(p,sheet_name='Y')
+    allValue = 0
+    w1_x = 0
+    w2_x = 1
+    w3_x = 2
+    w1_y = 0
+    w2_y = 0
+    w3_y = 0
+    tw1_x = 0
+    tw2_x = 1
+    tw3_x = 2
+    tw1_y = 0
+    tw2_y = 0
+    tw3_y = 0
+    for c in range(3):
+        for d in range(3):
+            for e in range(3):
+                if(allValue < computerValue33(w1_x,w1_y,w2_x,w2_y,w3_x,w3_y,p)):
+                    allValue = computerValue33(w1_x,w1_y,w2_x,w2_y,w3_x,w3_y,p)
+                    tw1_x = w1_x
+                    tw2_x = w2_x
+                    tw3_x = w3_x
+                    tw1_y = w1_y
+                    tw2_y = w2_y
+                    tw3_y = w3_y
+                w1_y += 1
+            w1_y = 0
+            w2_y += 1
+        w2_y = 0
+        w3_y += 1
+    print(f"最佳的分配方案是: 武器1分配给目标{tw1_y+1}, \
+    武器2分配给目标{tw2_y+1},\
+    武器3分配给目标{tw3_y+1},\
+    最终的价值为{allValue}")
+def enum(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfy = pd.read_excel(p,sheet_name='Y')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    df0 = pd.read_excel(p,sheet_name='0')
+    df0[0] = 1
+#实例：
+%time enumeration55('C:/Users/DELL/Desktop/毕设/data/5-5.xlsx')
+
+#WP12.ipynb
+
+import pandas as pd
+import numpy as np
+def WeightPriorityY1(w,t,p):
+    dfy = pd.read_excel(p,sheet_name='Y')
+    dfy1 = pd.read_excel(p,sheet_name='P') #fuck you jiandandezuichoujizhidexiangshou
+    for i in range(w):
+        row = dfy.iloc[i]
+        max_value = row.max()
+        for j in range(t):
+            dfy1.iat[i,j] = dfy.iat[i,j]/max_value
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      dfy1.to_excel(writer,sheet_name='Y1' ,index=False)
+def RankingYr(w,t,p):
+    dfy = pd.read_excel(p,sheet_name='Y')
+    dfyr = pd.read_excel(p,sheet_name='P') #fuck you jiandandezuichoujizhidexiangshou
+    for i in range(w):
+        row = dfy.iloc[i].rank(method='min', ascending=True)
+        dfyr.iloc[i] =  row
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      dfyr.to_excel(writer,sheet_name='YR' ,index=False)
+def GenerationXR(p):
+    dfxr = pd.read_excel(p,sheet_name='X0')
+    dfy1 = pd.read_excel(p,sheet_name='Y1')
+    dfyr = pd.read_excel(p,sheet_name='YR')
+    dfxr *= dfy1 * dfyr
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      dfxr.to_excel(writer,sheet_name='XR' ,index=False)
+def findMaxValueY(df,w,t):
+    max_value = 0
+    value_x = 0
+    value_y = 0
+    for i in range(w):
+        row = df.iloc[i]
+        max_y = row.max()
+        max_y_id = row[row == max_y].index[0]
+        if(max_y > max_value):
+            value_x = i 
+            value_y = max_y_id 
+            max_value = max_y
+    #print(f"该方案中最大值为{max_value}它的位置是第{value_x+1}行，第{value_y+1}列")    
+    return value_y
+
+def findMaxValueX(df,w,t):
+    max_value = 0
+    value_x = 0
+    value_y = 0
+    for i in range(w):
+        row = df.iloc[i]
+        max_y = row.max()
+        max_y_id = row[row == max_y].index[0]
+        if(max_y > max_value):
+            value_x = i 
+            value_y = max_y_id 
+            max_value = max_y
+    #print(f"该方案中最大值为{max_value}它的位置是第{value_x+1}行，第{value_y+1}列")    
+    return value_x
+    
+def findMaxValue(df,w,t):
+    max_value = 0
+    value_x = 0
+    value_y = 0
+    for i in range(w):
+        row = df.iloc[i]
+        max_y = row.max()
+        max_y_id = row[row == max_y].index[0]
+        if(max_y > max_value):
+            value_x = i
+            value_y = max_y_id
+            max_value = max_y
+    #print(f"该方案中最大值为{max_value}它的位置是第{value_x+1}行，第{value_y+1}列")    
+    return max_value
+def computerByX0(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    allValue = 0
+    for i in range(w):
+        row = dfx0.iloc[i]
+        id = row[row == 1].index[0]
+        allValue += dfp.iat[i,id]*dfv.iat[0,id]
+        dfv.iat[0,id] *= 1-dfp.iat[i,id]
+    return allValue
+def WeightPriorityXd(w,t,p,pa):
+    dfxr = pd.read_excel(p,sheet_name='XR')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    dfxd = pd.read_excel(p,sheet_name='0')
+    threshold = t * pa
+    for i in range(w):
+        row = dfxr.iloc[i]
+        max = row.max()
+        if(max > threshold):
+            id = row[row == max].index[0]
+            dfxd.iat[i,id] = 1
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      dfxd.to_excel(writer,sheet_name='XD' ,index=False)
+def WeightPriorityXd(w,t,p,pa):
+    dfxr = pd.read_excel(p,sheet_name='XR')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    dfxd = pd.read_excel(p,sheet_name='0')
+    threshold = t * pa
+    for i in range(w):
+        row = dfxr.iloc[i]
+        max = row.max()
+        if(max > threshold):
+            id = row[row == max].index[0]
+            dfxd.iat[i,id] = 1
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      dfxd.to_excel(writer,sheet_name='XD' ,index=False)
+def printlie(bestValue,firstValue,n):
+    print(f"最佳分配得到改良，最后的价值为{n}")
+    print(f"bestValue:{bestValue}")
+    #print(f"Value:{Value}")
+    print(f"firstValue:{firstValue}")
+    print(f"优化策略阈值为0.9")
+def WeightPriority(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfy = pd.read_excel(p,sheet_name='Y')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    df0 = pd.read_excel(p,sheet_name='0')
+    dfxd = pd.read_excel(p,sheet_name='XD')
+    firstValue = computerByX0(w,t,p)
+    bestValue = firstValue
+    for i in range(w):
+        row = dfxd.iloc[i]
+        if(row.max() == 1):
+            id = row[row == row.max()].index[0]
+            max_p = dfp.iat[i,id]
+            max_vp = dfvp.iat[i,id]
+            max_y = dfy.iat[i,id]
+            Value = testProblemByWP(w,t,dfp,dfv,dfvp,dfy,df0,dfxd,firstValue,i,id,p)
+            dfp.iat[i,id] = max_p
+            dfvp.iat[i,id] = max_vp
+            dfy.iat[i,id] = max_y
+            if(Value > firstValue):
+                bestValue = Value
+        if(bestValue == firstValue):
+            print(f"最佳分配价值仍然是{bestValue}")
+        elif(bestValue == Value):
+            print(f"最佳分配得到改良，最后的价值为{bestValue}")
+        print(f"bestValue:{bestValue}")
+        print(f"Value:{Value}")
+        print(f"firstValue:{firstValue}")
+        print(f"优化策略阈值为0.9")
+def WeightPriority(w,t,p):
+    dfp = pd.read_excel(p,sheet_name='P')
+    dfv = pd.read_excel(p,sheet_name='V')
+    dfvp = pd.read_excel(p,sheet_name='VP')
+    dfy = pd.read_excel(p,sheet_name='Y')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    df0 = pd.read_excel(p,sheet_name='0')
+    dfxd = pd.read_excel(p,sheet_name='XD')
+    firstValue = computerByX0(w,t,p)
+    bestValue = firstValue
+    for i in range(w):
+        row = dfxd.iloc[i]
+        if(row.max() == 1):
+            id = row[row == row.max()].index[0]
+            max_p = dfp.iat[i,id]
+            max_vp = dfvp.iat[i,id]
+            max_y = dfy.iat[i,id]
+            Value = testProblemByWP(w,t,dfp,dfv,dfvp,dfy,df0,dfxd,firstValue,i,id,p)
+            dfp.iat[i,id] = max_p
+            dfvp.iat[i,id] = max_vp
+            dfy.iat[i,id] = max_y
+            if(Value > firstValue):
+                bestValue = Value
+        if(bestValue == firstValue):
+            print(f"最佳分配价值仍然是{bestValue}")
+        elif(bestValue == Value):
+            print(f"最佳分配得到改良，最后的价值为{bestValue}")
+        print(f"bestValue:{bestValue}")
+        print(f"Value:{Value}")
+        print(f"firstValue:{firstValue}")
+        print(f"优化策略阈值为0.9")
+def WeightPriorityLsd(w,t,p,pa):
+    dflsr = pd.read_excel(p,sheet_name='LSR')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    dflsd = pd.read_excel(p,sheet_name='0')
+    threshold = t * pa
+    for i in range(w):
+        row = dflsr.iloc[i]
+        max = row.max()
+        if(max > threshold):
+            id = row[row == max].index[0]
+            dflsd.iat[i,id] = 1
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      dflsd.to_excel(writer,sheet_name='LSD' ,index=False)
+def WeightPriorityLsd(w,t,p,pa):
+    dflsr = pd.read_excel(p,sheet_name='LSR')
+    dfx0 = pd.read_excel(p,sheet_name='X0')
+    dflsd = pd.read_excel(p,sheet_name='0')
+    threshold = t * pa
+    for i in range(w):
+        row = dflsr.iloc[i]
+        max = row.max()
+        if(max > threshold):
+            id = row[row == max].index[0]
+            dflsd.iat[i,id] = 1
+    with pd.ExcelWriter(p,mode='a',engine='openpyxl',if_sheet_exists='replace') as writer:          #mode='a',engine='openpyxl'(追加模式)
+      dflsd.to_excel(writer,sheet_name='LSD' ,index=False)
+#实例：
+begin2(100,100,'C:/Users/DELL/Desktop/毕设/data/100-100.xlsx',0.9)
+%time WeightPriority(100,100,'C:/Users/DELL/Desktop/毕设/data/100-100.xlsx')
+%time WeightPriority2(100,100,'C:/Users/DELL/Desktop/毕设/data/100-100.xlsx')
+
+#te.ipynb
+import matplotlib.pyplot as plt
+import numpy as np
+#epoch,acc,loss,val_acc,val_loss
+x_axis_data = [1,2,3,4,5,6,7]
+y_axis_data1 = [68.72,69.17,69.26,69.63,69.35,70.3,66.8]
+y_axis_data2 = [71,73,52,66,74,82,71]
+y_axis_data3 = [82,83,82,76,84,92,81]
+
+        
+#画图 
+plt.plot(x_axis_data, y_axis_data1, 'b*--', alpha=0.5, linewidth=1, label='acc')#'
+plt.plot(x_axis_data, y_axis_data2, 'rs--', alpha=0.5, linewidth=1, label='acc')
+plt.plot(x_axis_data, y_axis_data3, 'go--', alpha=0.5, linewidth=1, label='acc')
+
+ 
+plt.legend()  #显示上面的label
+plt.xlabel('time')
+plt.ylabel('number')#accuracy
+ 
+#plt.ylim(-1,1)#仅设置y轴坐标范围
+plt.show()
+#epoch,acc,loss,val_acc,val_loss
+x_axis_data = range(1,1)
+y_axis_data1 = [899.10,
+858.60,
+850.23,
+825.84,
+827.91,
+816.21,
+803.27,
+797.04,
+795.34,
+800.19,
+776.52,
+773.28,
+763.56,
+761.94,
+761.92,
+750.59,
+728.75,
+722.88,
+718.11,
+717.34,
+705.77,
+744.75,
+705.69,
+694.36,
+680.13,
+676.71,
+676.44,
+657.06,
+656.82,
+662.22,
+655.02,
+629.63,
+622.19,
+652.61,
+608.44,
+615.60,
+591.12,
+590.99,
+579.88,
+572.40,
+556.74,
+550.26,
+539.10,
+576.69,
+532.77,
+537.66,
+525.99,
+506.41,
+521.54,
+490.71,
+490.01,
+484.74,
+478.25,
+461.19,
+436.70,
+443.52,
+432.81,
+427.69,
+427.41,
+409.80,
+408.51,
+415.14,
+395.73,
+394.27,
+394.59,
+393.75,
+390.55,
+388.71,
+376.39,
+361.05,
+356.03,
+371.79,
+350.94,
+348.96,
+354.14,
+325.42,
+324.36,
+321.69,
+318.46,
+298.88,
+293.86,
+281.56,
+259.78,
+289.98,
+256.56,
+254.16,
+253.64,
+259.11,
+246.42,
+211.11,
+212.96,
+192.56,
+159.57,
+165.90,
+114.55,
+108.84,
+124.48,
+106.92,
+89.88,
+83.81,]#[797.93,704.00,463.73,130.13,67.41]
+#y_axis_data2 = [71,73,52,66,74,82,71]
+#y_axis_data3 = [82,83,82,76,84,92,81]
+
+        
+#画图 
+plt.plot(x_axis_data, y_axis_data1,alpha=0.5, linewidth=1, label='——ratioBased')
+plt.plot([1,80],[600,-20],'--',alpha=0.5, linewidth=1, label='-----slopeBased')
+#plt.plot(x_axis_data, y_axis_data2, 'rs--', alpha=0.5, linewidth=1, label='acc')
+#plt.plot(x_axis_data, y_axis_data3, 'go--', alpha=0.5, linewidth=1, label='acc')
+
+ 
+plt.legend()  #显示上面的label
+plt.xlabel('Assignment')
+plt.ylabel('The y-value decays')#accuracy
+plt.title('Weapons 100 to Target 100')
+ 
+#plt.ylim(-1,1)#仅设置y轴坐标范围
+plt.show()
